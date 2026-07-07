@@ -4,7 +4,7 @@
   "version": "2.0.0",
   "type": "module",
   "scripts": {
-    "clean:vite": "node -e \"const{execSync}=require('child_process'),fs=require('fs'),p='node_modules/.vite-temp';try{execSync('taskkill /F /FI \\\"IMAGENAME eq esbuild.exe\\\"',{stdio:'pipe'})}catch(e){};try{fs.rmSync(p,{recursive:true,force:true})}catch(e){};try{fs.rmSync('.vite-cache',{recursive:true,force:true})}catch(e){}\"",
+    "clean:vite": "node -e \"const{execSync}=require('child_process'),fs=require('fs'),p='node_modules/.vite-temp';if(process.platform==='win32'){try{execSync('taskkill /F /FI \\\"IMAGENAME eq esbuild.exe\\\"',{stdio:'pipe'})}catch(e){}};try{fs.rmSync(p,{recursive:true,force:true})}catch(e){};try{fs.rmSync('.vite-cache',{recursive:true,force:true})}catch(e){}\"",
     "predev": "npm run clean:vite",
     "dev": "vite",
     "prebuild": "npm run clean:vite",
@@ -66,5 +66,8 @@
     "tailwindcss-animate": "^1.0.7",
     "typescript": "~5.9.3",
     "vite": "^7.2.4"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }

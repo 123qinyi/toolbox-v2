@@ -234,9 +234,9 @@ export function StaffManager({ open, onOpenChange }: StaffManagerProps) {
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-card rounded-xl border overflow-hidden flex-1 min-h-0"
+              className="bg-card rounded-xl border overflow-hidden flex-1 min-h-0 flex flex-col"
             >
-              <div className="overflow-y-auto h-full">
+              <div className="overflow-y-auto flex-1 min-h-0">
                 <table className="w-full">
                   <thead className="bg-card sticky top-0 z-10 shadow-[0_1px_0_0_rgba(0,0,0,0.06)]">
                     <tr>

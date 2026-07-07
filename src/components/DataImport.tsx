@@ -43,7 +43,6 @@ import { useStaffContext } from '@/contexts/StaffContext';
 import {
   Play,
   Trash2,
-  FileText,
   HelpCircle,
   CheckCircle2,
   AlertCircle,
@@ -68,18 +67,6 @@ interface DataImportProps {
   config: KPIConfig;
   onSaveToHistory?: (dateRange: string, kpiData: string, feedbackData: string, processedData: KPIRecord[]) => void;
 }
-
-const sampleKPIData = `日期范围\t客服类型\t组别\t姓名\t有效会话量\t满意\t一般\t不满意\t满意率\t一般率\t不满意率\t投诉数
-2026/03/01-2026/03/31\tVIP\tB组\t沈建华\t473\t326\t4\t7\t68.92%\t0.85%\t1.48%\t0
-2026/03/01-2026/03/31\t基础\tA组\t张磊\t520\t380\t5\t3\t73.08%\t0.96%\t0.58%\t1
-2026/03/01-2026/03/31\t组长\tA组\t李明\t450\t350\t3\t2\t77.78%\t0.67%\t0.44%\t0
-2026/03/01-2026/03/31\tVIP\tB组\t王小红\t600\t450\t8\t5\t75.00%\t1.33%\t0.83%\t0
-2026/03/01-2026/03/31\t基础\tA组\t赵强\t380\t280\t6\t4\t73.68%\t1.58%\t1.05%\t2`;
-
-const sampleFeedbackData = `A组\t有效反馈数\t对应达成结果\tB组\t有效反馈数\t对应达成结果
-张磊\t5\t50元\t沈建华\t2\t0元
-李明\t8\t100元\t王小红\t6\t50元
-赵强\t3\t0元\t\t\t`;
 
 const GRADE_COLORS: Record<string, string> = {
   S: '#FFD700',  // 亮金色 - 卓越
@@ -211,14 +198,6 @@ export function DataImport({
     setStatusMessage('✅ 已清空');
   }, [onUpdateImportState]);
 
-  const handleLoadSample = useCallback(() => {
-    setKpiData(sampleKPIData);
-    setFeedbackData(sampleFeedbackData);
-    onUpdateImportState({ kpiData: sampleKPIData, feedbackData: sampleFeedbackData });
-    setStatus('idle');
-    setStatusMessage('📋 已加载示例数据');
-  }, [onUpdateImportState]);
-
   const summary = processedData.length > 0 ? calculateSummary(processedData) : null;
 
   return (
@@ -238,7 +217,7 @@ export function DataImport({
                 <span>📊</span> KPI报表数据（必填）
               </div>
               <Textarea
-                placeholder="请粘贴KPI报表数据，包含表头，制表符分隔..."
+                placeholder={`日期范围\t客服类型\t组别\t姓名\t有效会话量\t满意\t一般\t不满意\t满意率\t一般率\t不满意率\t投诉数`}
                 value={kpiData}
                 onChange={(e) => updateKpiData(e.target.value)}
                 className="min-h-[200px] font-mono text-sm"
@@ -253,7 +232,7 @@ export function DataImport({
                 <span>📝</span> 有效反馈数据（选填）
               </div>
               <Textarea
-                placeholder="请粘贴有效反馈数据，可选填..."
+                placeholder={`A组\t有效反馈数\t对应达成结果\tB组\t有效反馈数\t对应达成结果`}
                 value={feedbackData}
                 onChange={(e) => updateFeedbackData(e.target.value)}
                 className="min-h-[200px] font-mono text-sm"
@@ -277,10 +256,6 @@ export function DataImport({
               <Button onClick={handleClear} variant="destructive" disabled={!kpiData && !feedbackData}>
                 <Trash2 className="w-4 h-4 mr-1" />
                 一键清空
-              </Button>
-              <Button onClick={handleLoadSample} variant="outline">
-                <FileText className="w-4 h-4 mr-1" />
-                加载示例
               </Button>
               <Dialog>
                 <DialogTrigger asChild>

@@ -1545,17 +1545,13 @@ export const ServiceQualityTool: React.FC = () => {
                   </div>
                 )}
                 <div className="flex gap-2 mt-4">
-                  <Button onClick={handleProcessData}>
-                    <Play className="w-4 h-4 mr-2" />
-                    处理数据
-                  </Button>
-                  <Button variant="outline" onClick={() => { setWorkloadInput(''); setQualityInput(''); setSessionInput(''); setFirstResponseInput(''); }}>
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    清空输入
+                  <Button onClick={handleProcessData} className="bg-green-600 hover:bg-green-700">
+                    <Play className="w-4 h-4 mr-1" />
+                    开始处理
                   </Button>
                   <Button variant="destructive" onClick={handleClearAll}>
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    一键清空所有
+                    <Trash2 className="w-4 h-4 mr-1" />
+                    一键清空
                   </Button>
                 </div>
               </CardContent>

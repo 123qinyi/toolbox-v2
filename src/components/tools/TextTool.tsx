@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Type, Repeat, FileText, Copy, Check, Eraser } from 'lucide-react';
+import { Type, Repeat, FileText, Copy, Check, Trash2 } from 'lucide-react';
 import { useStaffContext } from '@/contexts/StaffContext';
 
 export function TextTool() {
@@ -131,9 +131,9 @@ export function TextTool() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-gray-700">输入（| 分隔）</span>
-                    <Button variant="ghost" size="sm" onClick={handleFormatClear} disabled={!formatInput}>
-                      <Eraser className="w-4 h-4 mr-1" />
-                      清空
+                    <Button variant="destructive" size="sm" onClick={handleFormatClear} disabled={!formatInput}>
+                      <Trash2 className="w-4 h-4 mr-1" />
+                      一键清空
                     </Button>
                   </div>
                   <textarea

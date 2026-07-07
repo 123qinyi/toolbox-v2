@@ -1008,12 +1008,12 @@ export function TopTool(_props: TopToolProps) {
               />
               <div className="flex gap-2 mt-3">
                 <Button onClick={handleOneClickProcess} className="bg-green-600 hover:bg-green-700">
-                  <Play className="w-3.5 h-3.5 mr-1" />
-                  一键处理
+                  <Play className="w-4 h-4 mr-1" />
+                  开始处理
                 </Button>
                 <Button variant="destructive" onClick={handleClearAll}>
-                  <RotateCcw className="w-3.5 h-3.5 mr-1" />
-                  清空
+                  <Trash2 className="w-4 h-4 mr-1" />
+                  一键清空
                 </Button>
               </div>
             </CardContent>

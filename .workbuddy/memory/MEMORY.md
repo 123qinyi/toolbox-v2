@@ -47,6 +47,19 @@
 - **换电脑恢复流程**: 新电脑装 WorkBuddy → `git clone` 拉下仓库 → 重新配 git credential（GitHub token）→ 继续干活
 - **多电脑切换场景**: 电脑 A 改了没 push，又去电脑 B 改 → 回到电脑 A 时先 `git pull` 拉最新再动手
 - 本地代码和 GitHub 仓库应始终保持一致，每次改完必须 push
+
+## 记忆文件管理规范（跨机器同步）
+- **记忆文件已纳入 git 跟踪**，存放在 `.workbuddy/memory/` 下，随代码一起 push 到 GitHub
+- 用户级记忆 `~/.workbuddy/MEMORY.md` 不在项目目录，已在仓库中放一份副本 `.workbuddy/memory/USER_MEMORY_BACKUP.md`
+- **改记忆文件流程**:
+  1. 编辑本地记忆文件（MEMORY.md / USER_MEMORY_BACKUP.md / 日志）
+  2. 如果改了 `~/.workbuddy/MEMORY.md`（用户级），同步更新仓库里的 `USER_MEMORY_BACKUP.md`
+  3. `git add .workbuddy/memory/` → `git commit` → `git push origin main`
+- **换电脑恢复记忆流程**:
+  1. `git clone` 拉下仓库
+  2. 项目记忆（`.workbuddy/memory/MEMORY.md`）直接在仓库里，不用额外操作
+  3. 用户级记忆：把 `USER_MEMORY_BACKUP.md` 内容复制到新电脑的 `~/.workbuddy/MEMORY.md`
+- 仓库是 public，记忆文件内容用户已确认可公开
 ```
 src/
 ├── App.tsx              # 主入口

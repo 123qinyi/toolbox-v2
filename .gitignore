@@ -29,5 +29,5 @@ npm-debug.log*
 .env.local
 .env.*.local
 
-# WorkBuddy
-.workbuddy/
+# WorkBuddy (memory files tracked for cross-machine sync)
+# .workbuddy/

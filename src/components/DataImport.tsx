@@ -274,7 +274,7 @@ export function DataImport({
                 <Play className="w-4 h-4 mr-1" />
                 开始处理
               </Button>
-              <Button onClick={handleClear} variant="destructive">
+              <Button onClick={handleClear} variant="destructive" disabled={!kpiData && !feedbackData}>
                 <Trash2 className="w-4 h-4 mr-1" />
                 一键清空
               </Button>

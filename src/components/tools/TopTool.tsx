@@ -1011,7 +1011,7 @@ export function TopTool(_props: TopToolProps) {
                   <Play className="w-4 h-4 mr-1" />
                   开始处理
                 </Button>
-                <Button variant="destructive" onClick={handleClearAll}>
+                <Button variant="destructive" onClick={handleClearAll} disabled={!rawInput}>
                   <Trash2 className="w-4 h-4 mr-1" />
                   一键清空
                 </Button>

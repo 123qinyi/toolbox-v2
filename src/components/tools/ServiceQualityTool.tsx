@@ -1549,7 +1549,7 @@ export const ServiceQualityTool: React.FC = () => {
                     <Play className="w-4 h-4 mr-1" />
                     开始处理
                   </Button>
-                  <Button variant="destructive" onClick={handleClearAll}>
+                  <Button variant="destructive" onClick={handleClearAll} disabled={!workloadInput && !qualityInput && !sessionInput && !firstResponseInput}>
                     <Trash2 className="w-4 h-4 mr-1" />
                     一键清空
                   </Button>

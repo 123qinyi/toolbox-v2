@@ -14,14 +14,6 @@ import {
 
 
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import {
   Table,
   TableBody,
   TableCell,
@@ -43,7 +35,6 @@ import { useStaffContext } from '@/contexts/StaffContext';
 import {
   Play,
   Trash2,
-  HelpCircle,
   CheckCircle2,
   AlertCircle,
   Users,
@@ -257,50 +248,6 @@ export function DataImport({
                 <Trash2 className="w-4 h-4 mr-1" />
                 一键清空
               </Button>
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <HelpCircle className="w-4 h-4 mr-1" />
-                    帮助
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle>📖 KPI数据导入帮助</DialogTitle>
-                    <DialogDescription>
-                      了解如何正确导入KPI数据
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4 text-sm">
-                    <div>
-                      <h4 className="font-semibold mb-2">【数据格式要求】</h4>
-                      <div className="space-y-2 text-muted-foreground">
-                        <p><strong>1️⃣ KPI报表数据（必填）：</strong></p>
-                        <ul className="list-disc list-inside ml-4 space-y-1">
-                          <li>制表符分隔的表格数据</li>
-                          <li>必须包含表头行</li>
-                          <li>必需字段：日期范围、客服类型、组别、姓名、有效会话量、满意、一般、不满意、满意率</li>
-                        </ul>
-                        <p><strong>2️⃣ 有效反馈数据（可选）：</strong></p>
-                        <ul className="list-disc list-inside ml-4 space-y-1">
-                          <li>制表符分隔的表格数据</li>
-                          <li>格式：组别、姓名、有效反馈数、对应达成结果</li>
-                        </ul>
-                      </div>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold mb-2">【操作步骤】</h4>
-                      <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
-                        <li>从Excel或其他报表系统复制KPI数据</li>
-                        <li>粘贴到左侧文本框</li>
-                        <li>如有反馈数据，粘贴到右侧文本框</li>
-                        <li>点击"开始处理"按钮</li>
-                        <li>查看处理结果</li>
-                      </ol>
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
             </div>
 
             <div className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-lg">

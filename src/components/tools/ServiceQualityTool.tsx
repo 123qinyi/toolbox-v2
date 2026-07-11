@@ -2478,6 +2478,18 @@ export const ServiceQualityTool: React.FC = () => {
               </motion.div>
             </>
           )}
+
+          {/* 空状态提示 */}
+          {(!comparisonResult || !comparisonMetrics) && (
+            <div className="text-center py-16 text-muted-foreground bg-white rounded-lg border border-dashed">
+              <div className="text-6xl mb-4">📊</div>
+              <p className="text-lg font-medium">暂无环比数据</p>
+              <p className="text-sm mt-2">
+                请先在数据分析页处理数据并保存历史记录，<br />
+                然后在此选择基准期和当期进行环比分析
+              </p>
+            </div>
+          )}
         </TabsContent>
 
         {/* ========== 历史记录页 ========== */}

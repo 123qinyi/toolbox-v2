@@ -33,6 +33,9 @@ export const DEFAULT_STAFF: StaffConfig[] = [
   { id: '14', name: '李瞳', group: 'B组', type: '基础', status: '已转正' },
   { id: '15', name: '廖嘉乐', group: 'B组', type: '基础', status: '已转正' },
   { id: '16', name: '欧仁强', group: 'B组', type: '基础', status: '试用期' },
+  { id: '18', name: '朱欣烨', group: 'B组', type: '基础', status: '试用期' },
 ];
 
+export const STAFF_VERSION = 2; // 递增此版本号可强制刷新所有用户的本地人员数据
 export const STORAGE_KEY_STAFF = 'service_quality_staff';
+export const STORAGE_KEY_STAFF_VERSION = 'service_quality_staff_version';

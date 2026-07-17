@@ -1,10 +1,19 @@
 import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
-import { type StaffConfig, DEFAULT_STAFF, STORAGE_KEY_STAFF } from '@/types/staff';
+import { type StaffConfig, DEFAULT_STAFF, STORAGE_KEY_STAFF, STAFF_VERSION, STORAGE_KEY_STAFF_VERSION } from '@/types/staff';
 
 export function useStaffList() {
   const [staffList, setStaffList] = useState<StaffConfig[]>(() => {
     if (typeof window !== 'undefined') {
+      // 版本号检查：版本不匹配时强制用最新默认数据覆盖
+      const savedVersion = localStorage.getItem(STORAGE_KEY_STAFF_VERSION);
+      const currentVersion = String(STAFF_VERSION);
+      if (savedVersion !== currentVersion) {
+        localStorage.setItem(STORAGE_KEY_STAFF, JSON.stringify(DEFAULT_STAFF));
+        localStorage.setItem(STORAGE_KEY_STAFF_VERSION, currentVersion);
+        return DEFAULT_STAFF;
+      }
+
       const saved = localStorage.getItem(STORAGE_KEY_STAFF);
       if (saved) {
         try {
@@ -65,6 +74,7 @@ export function useStaffList() {
 
   const resetToDefault = useCallback(() => {
     saveStaffList(DEFAULT_STAFF);
+    localStorage.setItem(STORAGE_KEY_STAFF_VERSION, String(STAFF_VERSION));
     toast.success('已恢复默认人员列表');
   }, [saveStaffList]);
 

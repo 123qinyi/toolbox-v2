@@ -113,6 +113,9 @@ interface EmployeeQuality {
   avgResponseTime: number; // 平均响应时间（秒）
   responseRate60s: number; // 60秒应答率（%）
   firstResponseRate60s: number; // 首响60秒应答率（%）
+  inviteCount: number; // 主动邀评数
+  inviteRate: number; // 主动邀评率（%）
+  inviteSatisfactionRatio: number; // 邀评满意转化比（满意数/主动邀评数）
   dateRange?: string; // 日期范围
 }
 
@@ -600,6 +603,8 @@ export const ServiceQualityTool: React.FC = () => {
     const satisfactionIndex = findColumnIndex(headers, ['满意度']);
     const timeIndex = findColumnIndex(headers, ['会话开始时间', '开始时间']);
     const groupIndex = findColumnIndex(headers, ['分流客服组', '客服组']);
+    const responseTimeIndex = findColumnIndex(headers, ['客服首次响应时长', '首次响应时长', '首响时间', '响应时长']);
+    const inviteIndex = findColumnIndex(headers, ['客服是否邀评', '是否邀评']);
 
     if (agentIndex === -1) {
       toast.error('会话明细报表格式不正确，未找到"接待客服"列');
@@ -610,8 +615,34 @@ export const ServiceQualityTool: React.FC = () => {
       return { data: [], dateRange: '' };
     }
 
+    // 将 HH:MM:SS 转换为秒数
+    const timeToSeconds = (timeStr: string): number => {
+      const parts = timeStr.trim().split(':');
+      if (parts.length === 3) {
+        const h = parseInt(parts[0]) || 0;
+        const m = parseInt(parts[1]) || 0;
+        const s = parseInt(parts[2]) || 0;
+        return h * 3600 + m * 60 + s;
+      }
+      if (parts.length === 2) {
+        const m = parseInt(parts[0]) || 0;
+        const s = parseInt(parts[1]) || 0;
+        return m * 60 + s;
+      }
+      const num = parseFloat(timeStr);
+      return isNaN(num) ? 0 : num;
+    };
+
     // 按接待客服分组统计
-    const agentMap = new Map<string, { validSessions: number; satisfied: number; neutral: number; dissatisfied: number; group: string }>();
+    const agentMap = new Map<string, {
+      validSessions: number;
+      satisfied: number;
+      neutral: number;
+      dissatisfied: number;
+      group: string;
+      within60s: number;
+      inviteCount: number;
+    }>();
 
     let minDate = '';
     let maxDate = '';
@@ -626,6 +657,17 @@ export const ServiceQualityTool: React.FC = () => {
       const satisfaction = parts[satisfactionIndex]?.trim() || '';
       const groupRaw = groupIndex !== -1 ? parts[groupIndex]?.trim() || '' : '';
 
+      // 统计首响60秒
+      let within60s = false;
+      if (responseTimeIndex !== -1) {
+        const responseTimeStr = parts[responseTimeIndex]?.trim() || '00:00:00';
+        const seconds = timeToSeconds(responseTimeStr);
+        if (seconds <= 60) within60s = true;
+      }
+
+      // 统计邀评
+      const invited = inviteIndex !== -1 ? (parts[inviteIndex]?.trim() === '是') : false;
+
       // 统计日期范围
       if (timeIndex !== -1) {
         const time = parts[timeIndex]?.trim() || '';
@@ -637,10 +679,14 @@ export const ServiceQualityTool: React.FC = () => {
       }
 
       if (!agentMap.has(name)) {
-        agentMap.set(name, { validSessions: 0, satisfied: 0, neutral: 0, dissatisfied: 0, group: groupRaw });
+        agentMap.set(name, { validSessions: 0, satisfied: 0, neutral: 0, dissatisfied: 0, group: groupRaw, within60s: 0, inviteCount: 0 });
       }
       const agent = agentMap.get(name)!;
       agent.validSessions++;
+
+      if (within60s) agent.within60s++;
+
+      if (invited) agent.inviteCount++;
 
       if (satisfaction === '满意') {
         agent.satisfied++;
@@ -666,6 +712,10 @@ export const ServiceQualityTool: React.FC = () => {
       }
 
       const validSessions = stats.validSessions || 1;
+      const inviteCount = stats.inviteCount;
+      const inviteRate = (inviteCount / validSessions) * 100;
+      const inviteSatisfactionRatio = inviteCount > 0 ? stats.satisfied / inviteCount : 0;
+      const firstResponseRate60s = responseTimeIndex !== -1 ? (stats.within60s / validSessions) * 100 : 0;
 
       data.push({
         id: `eq_${Date.now()}_${Math.random()}`,
@@ -681,7 +731,10 @@ export const ServiceQualityTool: React.FC = () => {
         dissatisfiedRate: (stats.dissatisfied / validSessions) * 100,
         avgResponseTime: 0,
         responseRate60s: 0,
-        firstResponseRate60s: 0,
+        firstResponseRate60s,
+        inviteCount,
+        inviteRate,
+        inviteSatisfactionRatio,
         dateRange,
       });
     });
@@ -753,6 +806,9 @@ export const ServiceQualityTool: React.FC = () => {
             avgResponseTime: quality.avgResponseTime,
             responseRate60s: quality.responseRate60s,
             firstResponseRate60s: fr?.firstResponseRate60s || 0,
+            inviteCount: 0,
+            inviteRate: 0,
+            inviteSatisfactionRatio: 0,
             dateRange: wlDateRange,
           });
         }
@@ -903,30 +959,33 @@ export const ServiceQualityTool: React.FC = () => {
 
     const dateRange = sortedResult[0]?.dateRange || '未知日期范围';
     
-    const localGroupStats: Record<string, { sessions: number; satisfied: number; neutral: number; dissatisfied: number; count: number }> = {};
+    const localGroupStats: Record<string, { sessions: number; satisfied: number; neutral: number; dissatisfied: number; count: number; inviteCount: number }> = {};
     
     sortedResult.forEach(e => {
       const group = e.group || '未分组';
       if (!localGroupStats[group]) {
-        localGroupStats[group] = { sessions: 0, satisfied: 0, neutral: 0, dissatisfied: 0, count: 0 };
+        localGroupStats[group] = { sessions: 0, satisfied: 0, neutral: 0, dissatisfied: 0, count: 0, inviteCount: 0 };
       }
       localGroupStats[group].count++;
       localGroupStats[group].sessions += e.validSessions;
       localGroupStats[group].satisfied += e.satisfied;
       localGroupStats[group].neutral += e.neutral;
       localGroupStats[group].dissatisfied += e.dissatisfied;
+      localGroupStats[group].inviteCount += e.inviteCount ?? 0;
     });
 
     const totalSessions = sortedResult.reduce((sum, e) => sum + e.validSessions, 0);
     const totalSatisfied = sortedResult.reduce((sum, e) => sum + e.satisfied, 0);
     const totalNeutral = sortedResult.reduce((sum, e) => sum + e.neutral, 0);
     const totalDissatisfied = sortedResult.reduce((sum, e) => sum + e.dissatisfied, 0);
+    const totalInviteCount = sortedResult.reduce((sum, e) => sum + (e.inviteCount ?? 0), 0);
 
     const lines: string[] = [];
-    lines.push('日期范围\t客服类型\t组别\t姓名\t有效会话量\t满意\t一般\t不满意\t满意率\t一般率\t不满意率\t首响60秒应答率');
+    lines.push('日期范围\t客服类型\t组别\t姓名\t有效会话量\t满意\t一般\t不满意\t满意率\t一般率\t不满意率\t首响60秒应答率\t主动邀评数\t主动邀评率\t邀评满意转化比');
 
     sortedResult.forEach(e => {
-      lines.push(`${dateRange}\t${e.type}\t${e.group}\t${e.name}\t${e.validSessions}\t${e.satisfied}\t${e.neutral}\t${e.dissatisfied}\t${e.satisfactionRate.toFixed(2)}%\t${e.neutralRate.toFixed(2)}%\t${e.dissatisfiedRate.toFixed(2)}%\t${e.firstResponseRate60s.toFixed(2)}%`);
+      const invSatRatio = (e.inviteCount ?? 0) > 0 ? (e.inviteSatisfactionRatio ?? 0).toFixed(2) : '-';
+      lines.push(`${dateRange}\t${e.type}\t${e.group}\t${e.name}\t${e.validSessions}\t${e.satisfied}\t${e.neutral}\t${e.dissatisfied}\t${e.satisfactionRate.toFixed(2)}%\t${e.neutralRate.toFixed(2)}%\t${e.dissatisfiedRate.toFixed(2)}%\t${e.firstResponseRate60s.toFixed(2)}%\t${e.inviteCount ?? 0}\t${(e.inviteRate ?? 0).toFixed(2)}%\t${invSatRatio}`);
     });
 
     const groupLeaderMap: Record<string, string> = { 'A组': '裘崇伟', 'B组': '孙泽沁' };
@@ -940,8 +999,10 @@ export const ServiceQualityTool: React.FC = () => {
         const groupFirstResponseRate = groupFirstResponse.length > 0
           ? groupFirstResponse.reduce((sum, e) => sum + e.firstResponseRate60s * e.validSessions, 0) / (groupFirstResponse.reduce((sum, e) => sum + e.validSessions, 0) || 1)
           : 0;
+        const groupInviteRate = s.sessions > 0 ? (s.inviteCount / s.sessions * 100) : 0;
+        const groupInvSatRatio = s.inviteCount > 0 ? (s.satisfied / s.inviteCount).toFixed(2) : '-';
         const leaderName = groupLeaderMap[group] || '';
-        lines.push(`${dateRange}\t组长\t${group}\t${leaderName}\t${s.sessions}\t${s.satisfied}\t${s.neutral}\t${s.dissatisfied}\t${satRate.toFixed(2)}%\t${neuRate.toFixed(2)}%\t${disRate.toFixed(2)}%\t${groupFirstResponseRate.toFixed(2)}%`);
+        lines.push(`${dateRange}\t组长\t${group}\t${leaderName}\t${s.sessions}\t${s.satisfied}\t${s.neutral}\t${s.dissatisfied}\t${satRate.toFixed(2)}%\t${neuRate.toFixed(2)}%\t${disRate.toFixed(2)}%\t${groupFirstResponseRate.toFixed(2)}%\t${s.inviteCount}\t${groupInviteRate.toFixed(2)}%\t${groupInvSatRatio}`);
       }
     });
 
@@ -952,7 +1013,9 @@ export const ServiceQualityTool: React.FC = () => {
     const totalFirstResponseRate = allWithFirstResponse.length > 0
       ? allWithFirstResponse.reduce((sum, e) => sum + e.firstResponseRate60s * e.validSessions, 0) / (allWithFirstResponse.reduce((sum, e) => sum + e.validSessions, 0) || 1)
       : 0;
-    lines.push(`${dateRange}\t统计\t总计\t\t${totalSessions}\t${totalSatisfied}\t${totalNeutral}\t${totalDissatisfied}\t${totalSatRate.toFixed(2)}%\t${totalNeuRate.toFixed(2)}%\t${totalDisRate.toFixed(2)}%\t${totalFirstResponseRate.toFixed(2)}%`);
+    const totalInviteRate = totalSessions > 0 ? (totalInviteCount / totalSessions * 100) : 0;
+    const totalInvSatRatio = totalInviteCount > 0 ? (totalSatisfied / totalInviteCount).toFixed(2) : '-';
+    lines.push(`${dateRange}\t统计\t总计\t\t${totalSessions}\t${totalSatisfied}\t${totalNeutral}\t${totalDissatisfied}\t${totalSatRate.toFixed(2)}%\t${totalNeuRate.toFixed(2)}%\t${totalDisRate.toFixed(2)}%\t${totalFirstResponseRate.toFixed(2)}%\t${totalInviteCount}\t${totalInviteRate.toFixed(2)}%\t${totalInvSatRatio}`);
 
     navigator.clipboard.writeText(lines.join('\n'));
     toast.success('已复制到剪贴板');
@@ -966,30 +1029,33 @@ export const ServiceQualityTool: React.FC = () => {
 
     const dateRange = sortedResult[0]?.dateRange || '未知日期范围';
     
-    const localGroupStats: Record<string, { sessions: number; satisfied: number; neutral: number; dissatisfied: number; count: number }> = {};
+    const localGroupStats: Record<string, { sessions: number; satisfied: number; neutral: number; dissatisfied: number; count: number; inviteCount: number }> = {};
     
     sortedResult.forEach(e => {
       const group = e.group || '未分组';
       if (!localGroupStats[group]) {
-        localGroupStats[group] = { sessions: 0, satisfied: 0, neutral: 0, dissatisfied: 0, count: 0 };
+        localGroupStats[group] = { sessions: 0, satisfied: 0, neutral: 0, dissatisfied: 0, count: 0, inviteCount: 0 };
       }
       localGroupStats[group].count++;
       localGroupStats[group].sessions += e.validSessions;
       localGroupStats[group].satisfied += e.satisfied;
       localGroupStats[group].neutral += e.neutral;
       localGroupStats[group].dissatisfied += e.dissatisfied;
+      localGroupStats[group].inviteCount += e.inviteCount ?? 0;
     });
 
     const totalSessions = sortedResult.reduce((sum, e) => sum + e.validSessions, 0);
     const totalSatisfied = sortedResult.reduce((sum, e) => sum + e.satisfied, 0);
     const totalNeutral = sortedResult.reduce((sum, e) => sum + e.neutral, 0);
     const totalDissatisfied = sortedResult.reduce((sum, e) => sum + e.dissatisfied, 0);
+    const totalInviteCount = sortedResult.reduce((sum, e) => sum + (e.inviteCount ?? 0), 0);
 
     const lines: string[] = [];
-    lines.push('日期范围\t客服类型\t组别\t姓名\t有效会话量\t满意\t一般\t不满意\t满意率\t一般率\t不满意率\t首响60秒应答率');
+    lines.push('日期范围\t客服类型\t组别\t姓名\t有效会话量\t满意\t一般\t不满意\t满意率\t一般率\t不满意率\t首响60秒应答率\t主动邀评数\t主动邀评率\t邀评满意转化比');
 
     sortedResult.forEach(e => {
-      lines.push(`${dateRange}\t${e.type}\t${e.group}\t${e.name}\t${e.validSessions}\t${e.satisfied}\t${e.neutral}\t${e.dissatisfied}\t${e.satisfactionRate.toFixed(2)}%\t${e.neutralRate.toFixed(2)}%\t${e.dissatisfiedRate.toFixed(2)}%\t${e.firstResponseRate60s.toFixed(2)}%`);
+      const invSatRatio = (e.inviteCount ?? 0) > 0 ? (e.inviteSatisfactionRatio ?? 0).toFixed(2) : '-';
+      lines.push(`${dateRange}\t${e.type}\t${e.group}\t${e.name}\t${e.validSessions}\t${e.satisfied}\t${e.neutral}\t${e.dissatisfied}\t${e.satisfactionRate.toFixed(2)}%\t${e.neutralRate.toFixed(2)}%\t${e.dissatisfiedRate.toFixed(2)}%\t${e.firstResponseRate60s.toFixed(2)}%\t${e.inviteCount ?? 0}\t${(e.inviteRate ?? 0).toFixed(2)}%\t${invSatRatio}`);
     });
 
     const groupLeaderMap: Record<string, string> = { 'A组': '裘崇伟', 'B组': '孙泽沁' };
@@ -1003,8 +1069,10 @@ export const ServiceQualityTool: React.FC = () => {
         const groupFirstResponseRate = groupFirstResponse.length > 0
           ? groupFirstResponse.reduce((sum, e) => sum + e.firstResponseRate60s * e.validSessions, 0) / (groupFirstResponse.reduce((sum, e) => sum + e.validSessions, 0) || 1)
           : 0;
+        const groupInviteRate = s.sessions > 0 ? (s.inviteCount / s.sessions * 100) : 0;
+        const groupInvSatRatio = s.inviteCount > 0 ? (s.satisfied / s.inviteCount).toFixed(2) : '-';
         const leaderName = groupLeaderMap[group] || '';
-        lines.push(`${dateRange}\t组长\t${group}\t${leaderName}\t${s.sessions}\t${s.satisfied}\t${s.neutral}\t${s.dissatisfied}\t${satRate.toFixed(2)}%\t${neuRate.toFixed(2)}%\t${disRate.toFixed(2)}%\t${groupFirstResponseRate.toFixed(2)}%`);
+        lines.push(`${dateRange}\t组长\t${group}\t${leaderName}\t${s.sessions}\t${s.satisfied}\t${s.neutral}\t${s.dissatisfied}\t${satRate.toFixed(2)}%\t${neuRate.toFixed(2)}%\t${disRate.toFixed(2)}%\t${groupFirstResponseRate.toFixed(2)}%\t${s.inviteCount}\t${groupInviteRate.toFixed(2)}%\t${groupInvSatRatio}`);
       }
     });
 
@@ -1015,7 +1083,9 @@ export const ServiceQualityTool: React.FC = () => {
     const totalFirstResponseRate = allWithFirstResponse.length > 0
       ? allWithFirstResponse.reduce((sum, e) => sum + e.firstResponseRate60s * e.validSessions, 0) / (allWithFirstResponse.reduce((sum, e) => sum + e.validSessions, 0) || 1)
       : 0;
-    lines.push(`${dateRange}\t统计\t总计\t\t${totalSessions}\t${totalSatisfied}\t${totalNeutral}\t${totalDissatisfied}\t${totalSatRate.toFixed(2)}%\t${totalNeuRate.toFixed(2)}%\t${totalDisRate.toFixed(2)}%\t${totalFirstResponseRate.toFixed(2)}%`);
+    const totalInviteRate = totalSessions > 0 ? (totalInviteCount / totalSessions * 100) : 0;
+    const totalInvSatRatio = totalInviteCount > 0 ? (totalSatisfied / totalInviteCount).toFixed(2) : '-';
+    lines.push(`${dateRange}\t统计\t总计\t\t${totalSessions}\t${totalSatisfied}\t${totalNeutral}\t${totalDissatisfied}\t${totalSatRate.toFixed(2)}%\t${totalNeuRate.toFixed(2)}%\t${totalDisRate.toFixed(2)}%\t${totalFirstResponseRate.toFixed(2)}%\t${totalInviteCount}\t${totalInviteRate.toFixed(2)}%\t${totalInvSatRatio}`);
 
     const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/plain;charset=utf-8;' });
     const link = document.createElement('a');
@@ -1321,7 +1391,13 @@ export const ServiceQualityTool: React.FC = () => {
   // ==================== 历史记录功能 ====================
 
   const handleLoadHistory = useCallback((history: QualityHistory) => {
-    setAnalysisResult(history.data);
+    const normalizedData = history.data.map(e => ({
+      ...e,
+      inviteCount: e.inviteCount ?? 0,
+      inviteRate: e.inviteRate ?? 0,
+      inviteSatisfactionRatio: e.inviteSatisfactionRatio ?? 0,
+    }));
+    setAnalysisResult(normalizedData);
     setSortConfig({ key: 'satisfactionRate', direction: 'desc' });
     setActiveTab('analysis');
     toast.success(`已加载历史记录（${history.data.length}条）`);
@@ -1329,7 +1405,13 @@ export const ServiceQualityTool: React.FC = () => {
 
   // 数据对比页 - 从历史记录加载数据（不跳转Tab）
   const handleLoadHistoryForComparison = useCallback((history: QualityHistory) => {
-    setAnalysisResult(history.data);
+    const normalizedData = history.data.map(e => ({
+      ...e,
+      inviteCount: e.inviteCount ?? 0,
+      inviteRate: e.inviteRate ?? 0,
+      inviteSatisfactionRatio: e.inviteSatisfactionRatio ?? 0,
+    }));
+    setAnalysisResult(normalizedData);
     setComparisonDataSource({ label: history.dateRange, count: history.data.length, dateRange: history.dateRange });
     setComparisonConfig({ type: 'person', targetA: {}, targetB: {} });
     setComparisonResult2(null);
@@ -1506,7 +1588,7 @@ export const ServiceQualityTool: React.FC = () => {
                   <div className="space-y-2">
                     <label className="text-sm font-medium">会话明细报表</label>
                     <Textarea
-                      placeholder={`会话开始时间\t一级分类\t二级分类\t三级分类\t四级分类\t五级分类\t咨询分类\t接待客服\t分流客服组\t访客用户名\t满意度\t备注内容\t项目渠道\t情绪分层`}
+                      placeholder={`会话开始时间\t客服首次响应时长\t接待客服\t访客用户名\t满意度\t邀评来源\t客服是否邀评`}
                       value={sessionInput}
                       onChange={(e) => setSessionInput(e.target.value)}
                       className="h-[200px] max-h-[300px] overflow-y-auto font-mono text-sm resize-none"
@@ -1953,6 +2035,39 @@ export const ServiceQualityTool: React.FC = () => {
                             )}
                           </div>
                         </th>
+                        <th
+                          onClick={() => handleSort('inviteCount')}
+                          className="px-4 py-3 text-center text-sm font-medium cursor-pointer hover:bg-muted/70 transition-colors"
+                        >
+                          <div className="flex items-center justify-center gap-1">
+                            主动邀评数
+                            {sortConfig.key === 'inviteCount' && (
+                              <ArrowUpDown className={cn("w-3 h-3", sortConfig.direction === 'desc' && "rotate-180")} />
+                            )}
+                          </div>
+                        </th>
+                        <th
+                          onClick={() => handleSort('inviteRate')}
+                          className="px-4 py-3 text-center text-sm font-medium cursor-pointer hover:bg-muted/70 transition-colors"
+                        >
+                          <div className="flex items-center justify-center gap-1">
+                            主动邀评率
+                            {sortConfig.key === 'inviteRate' && (
+                              <ArrowUpDown className={cn("w-3 h-3", sortConfig.direction === 'desc' && "rotate-180")} />
+                            )}
+                          </div>
+                        </th>
+                        <th
+                          onClick={() => handleSort('inviteSatisfactionRatio')}
+                          className="px-4 py-3 text-center text-sm font-medium cursor-pointer hover:bg-muted/70 transition-colors"
+                        >
+                          <div className="flex items-center justify-center gap-1">
+                            邀评满意转化比
+                            {sortConfig.key === 'inviteSatisfactionRatio' && (
+                              <ArrowUpDown className={cn("w-3 h-3", sortConfig.direction === 'desc' && "rotate-180")} />
+                            )}
+                          </div>
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y">
@@ -1993,6 +2108,9 @@ export const ServiceQualityTool: React.FC = () => {
                           <td className="px-4 py-2 text-center">{e.neutralRate.toFixed(2)}%</td>
                           <td className="px-4 py-2 text-center">{e.dissatisfiedRate.toFixed(2)}%</td>
                           <td className="px-4 py-2 text-center font-medium text-cyan-600">{e.firstResponseRate60s > 0 ? `${e.firstResponseRate60s.toFixed(2)}%` : '-'}</td>
+                          <td className="px-4 py-2 text-center font-medium text-purple-600">{e.inviteCount}</td>
+                          <td className="px-4 py-2 text-center text-purple-600">{e.inviteRate.toFixed(2)}%</td>
+                          <td className="px-4 py-2 text-center font-medium text-indigo-600">{e.inviteCount > 0 ? `${e.inviteSatisfactionRatio.toFixed(2)}` : '-'}</td>
                         </motion.tr>
                       ))}
                     </tbody>

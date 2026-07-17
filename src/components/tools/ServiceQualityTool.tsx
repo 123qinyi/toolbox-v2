@@ -1561,7 +1561,7 @@ export const ServiceQualityTool: React.FC = () => {
                       onChange={() => setAnalysisFormat('old')}
                       className="accent-primary"
                     />
-                    原格式（工作量+质量报表）
+                    原格式（工作量+质量+首响）
                   </label>
                   <label className="flex items-center gap-1.5 cursor-pointer text-sm">
                     <input
@@ -1572,7 +1572,7 @@ export const ServiceQualityTool: React.FC = () => {
                       onChange={() => setAnalysisFormat('new')}
                       className="accent-primary"
                     />
-                    新格式（会话明细）
+                    新格式（会话记录满意度+邀评+首响）
                   </label>
                 </div>
 

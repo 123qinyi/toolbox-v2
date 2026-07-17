@@ -21,6 +21,7 @@ export const DEFAULT_STAFF: StaffConfig[] = [
   { id: '5', name: '董凡', group: 'A组', type: '基础', status: '试用期' },
   { id: '6', name: '杨戴丽', group: 'A组', type: '基础', status: '试用期' },
   { id: '7', name: '朱吴俊', group: 'A组', type: '基础', status: '试用期' },
+  { id: '19', name: '王乐毅', group: 'A组', type: '基础', status: '试用期' },
   // B组 组长
   { id: '17', name: '孙泽沁', group: 'B组', type: '组长', status: '已转正' },
   // B组 VIP
@@ -36,6 +37,4 @@ export const DEFAULT_STAFF: StaffConfig[] = [
   { id: '18', name: '朱欣烨', group: 'B组', type: '基础', status: '试用期' },
 ];
 
-export const STAFF_VERSION = 2; // 递增此版本号可强制刷新所有用户的本地人员数据
 export const STORAGE_KEY_STAFF = 'service_quality_staff';
-export const STORAGE_KEY_STAFF_VERSION = 'service_quality_staff_version';

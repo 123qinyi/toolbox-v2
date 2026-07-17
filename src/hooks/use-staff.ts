@@ -1,30 +1,31 @@
 import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
-import { type StaffConfig, DEFAULT_STAFF, STORAGE_KEY_STAFF, STAFF_VERSION, STORAGE_KEY_STAFF_VERSION } from '@/types/staff';
+import { type StaffConfig, DEFAULT_STAFF, STORAGE_KEY_STAFF } from '@/types/staff';
 
 export function useStaffList() {
   const [staffList, setStaffList] = useState<StaffConfig[]>(() => {
     if (typeof window !== 'undefined') {
-      // 版本号检查：版本不匹配时强制用最新默认数据覆盖
-      const savedVersion = localStorage.getItem(STORAGE_KEY_STAFF_VERSION);
-      const currentVersion = String(STAFF_VERSION);
-      if (savedVersion !== currentVersion) {
-        localStorage.setItem(STORAGE_KEY_STAFF, JSON.stringify(DEFAULT_STAFF));
-        localStorage.setItem(STORAGE_KEY_STAFF_VERSION, currentVersion);
-        return DEFAULT_STAFF;
-      }
-
       const saved = localStorage.getItem(STORAGE_KEY_STAFF);
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
-          // 旧数据兼容：补全 status 字段
           if (Array.isArray(parsed)) {
+            // 旧数据兼容：补全 status 字段
             const migrated = parsed.map((s: any) => ({
               ...s,
               status: s.status ?? '已转正',
             }));
-            // 若有缺失字段，静默写回 localStorage
+
+            // 合并策略：默认列表中有但本地没有的人，自动补上（按 name 匹配）
+            const existingNames = new Set(migrated.map((s: StaffConfig) => s.name));
+            const missing = DEFAULT_STAFF.filter(d => !existingNames.has(d.name));
+            if (missing.length > 0) {
+              const merged = [...migrated, ...missing];
+              localStorage.setItem(STORAGE_KEY_STAFF, JSON.stringify(merged));
+              return merged;
+            }
+
+            // 若有缺失 status 字段，静默写回
             if (parsed.some((s: any) => !s.status)) {
               localStorage.setItem(STORAGE_KEY_STAFF, JSON.stringify(migrated));
             }
@@ -74,7 +75,6 @@ export function useStaffList() {
 
   const resetToDefault = useCallback(() => {
     saveStaffList(DEFAULT_STAFF);
-    localStorage.setItem(STORAGE_KEY_STAFF_VERSION, String(STAFF_VERSION));
     toast.success('已恢复默认人员列表');
   }, [saveStaffList]);
 

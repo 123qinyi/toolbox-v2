@@ -77,7 +77,7 @@ const tools: Tool[] = [
 ];
 
 function App() {
-  const [activeToolId, setActiveToolId] = useState('kpi');
+  const [activeToolId, setActiveToolId] = useState('service-quality');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [staffManagerOpen, setStaffManagerOpen] = useState(false);
 

@@ -260,7 +260,7 @@ export const ServiceQualityTool: React.FC = () => {
     }
     return '';
   });
-  const [analysisFormat, setAnalysisFormat] = useState<'old' | 'new'>('old');
+  const [analysisFormat, setAnalysisFormat] = useState<'old' | 'new'>('new');
   const [analysisResult, setAnalysisResult] = useState<EmployeeQuality[]>([]);
   const [filterGroup, setFilterGroup] = useState<string>(() => {
     if (typeof window !== 'undefined') {
@@ -1556,23 +1556,23 @@ export const ServiceQualityTool: React.FC = () => {
                     <input
                       type="radio"
                       name="analysisFormat"
-                      value="old"
-                      checked={analysisFormat === 'old'}
-                      onChange={() => setAnalysisFormat('old')}
-                      className="accent-primary"
-                    />
-                    原格式（工作量+质量+首响）
-                  </label>
-                  <label className="flex items-center gap-1.5 cursor-pointer text-sm">
-                    <input
-                      type="radio"
-                      name="analysisFormat"
                       value="new"
                       checked={analysisFormat === 'new'}
                       onChange={() => setAnalysisFormat('new')}
                       className="accent-primary"
                     />
-                    新格式（会话记录满意度+邀评+首响）
+                    会话记录（满意度+邀评+首响）
+                  </label>
+                  <label className="flex items-center gap-1.5 cursor-pointer text-sm">
+                    <input
+                      type="radio"
+                      name="analysisFormat"
+                      value="old"
+                      checked={analysisFormat === 'old'}
+                      onChange={() => setAnalysisFormat('old')}
+                      className="accent-primary"
+                    />
+                    坐席报表（工作量+质量+首响）
                   </label>
                 </div>
 

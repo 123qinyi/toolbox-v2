@@ -959,33 +959,30 @@ export const ServiceQualityTool: React.FC = () => {
 
     const dateRange = sortedResult[0]?.dateRange || '未知日期范围';
     
-    const localGroupStats: Record<string, { sessions: number; satisfied: number; neutral: number; dissatisfied: number; count: number; inviteCount: number }> = {};
+    const localGroupStats: Record<string, { sessions: number; satisfied: number; neutral: number; dissatisfied: number; count: number }> = {};
     
     sortedResult.forEach(e => {
       const group = e.group || '未分组';
       if (!localGroupStats[group]) {
-        localGroupStats[group] = { sessions: 0, satisfied: 0, neutral: 0, dissatisfied: 0, count: 0, inviteCount: 0 };
+        localGroupStats[group] = { sessions: 0, satisfied: 0, neutral: 0, dissatisfied: 0, count: 0 };
       }
       localGroupStats[group].count++;
       localGroupStats[group].sessions += e.validSessions;
       localGroupStats[group].satisfied += e.satisfied;
       localGroupStats[group].neutral += e.neutral;
       localGroupStats[group].dissatisfied += e.dissatisfied;
-      localGroupStats[group].inviteCount += e.inviteCount ?? 0;
     });
 
     const totalSessions = sortedResult.reduce((sum, e) => sum + e.validSessions, 0);
     const totalSatisfied = sortedResult.reduce((sum, e) => sum + e.satisfied, 0);
     const totalNeutral = sortedResult.reduce((sum, e) => sum + e.neutral, 0);
     const totalDissatisfied = sortedResult.reduce((sum, e) => sum + e.dissatisfied, 0);
-    const totalInviteCount = sortedResult.reduce((sum, e) => sum + (e.inviteCount ?? 0), 0);
 
     const lines: string[] = [];
-    lines.push('日期范围\t客服类型\t组别\t姓名\t有效会话量\t满意\t一般\t不满意\t满意率\t一般率\t不满意率\t首响60秒应答率\t主动邀评数\t主动邀评率\t邀评满意转化比');
+    lines.push('日期范围\t客服类型\t组别\t姓名\t有效会话量\t满意\t一般\t不满意\t满意率\t一般率\t不满意率\t首响60秒应答率');
 
     sortedResult.forEach(e => {
-      const invSatRatio = (e.inviteCount ?? 0) > 0 ? (e.inviteSatisfactionRatio ?? 0).toFixed(2) : '-';
-      lines.push(`${dateRange}\t${e.type}\t${e.group}\t${e.name}\t${e.validSessions}\t${e.satisfied}\t${e.neutral}\t${e.dissatisfied}\t${e.satisfactionRate.toFixed(2)}%\t${e.neutralRate.toFixed(2)}%\t${e.dissatisfiedRate.toFixed(2)}%\t${e.firstResponseRate60s.toFixed(2)}%\t${e.inviteCount ?? 0}\t${(e.inviteRate ?? 0).toFixed(2)}%\t${invSatRatio}`);
+      lines.push(`${dateRange}\t${e.type}\t${e.group}\t${e.name}\t${e.validSessions}\t${e.satisfied}\t${e.neutral}\t${e.dissatisfied}\t${e.satisfactionRate.toFixed(2)}%\t${e.neutralRate.toFixed(2)}%\t${e.dissatisfiedRate.toFixed(2)}%\t${e.firstResponseRate60s.toFixed(2)}%`);
     });
 
     const groupLeaderMap: Record<string, string> = { 'A组': '裘崇伟', 'B组': '孙泽沁' };
@@ -999,10 +996,8 @@ export const ServiceQualityTool: React.FC = () => {
         const groupFirstResponseRate = groupFirstResponse.length > 0
           ? groupFirstResponse.reduce((sum, e) => sum + e.firstResponseRate60s * e.validSessions, 0) / (groupFirstResponse.reduce((sum, e) => sum + e.validSessions, 0) || 1)
           : 0;
-        const groupInviteRate = s.sessions > 0 ? (s.inviteCount / s.sessions * 100) : 0;
-        const groupInvSatRatio = s.inviteCount > 0 ? (s.satisfied / s.inviteCount).toFixed(2) : '-';
         const leaderName = groupLeaderMap[group] || '';
-        lines.push(`${dateRange}\t组长\t${group}\t${leaderName}\t${s.sessions}\t${s.satisfied}\t${s.neutral}\t${s.dissatisfied}\t${satRate.toFixed(2)}%\t${neuRate.toFixed(2)}%\t${disRate.toFixed(2)}%\t${groupFirstResponseRate.toFixed(2)}%\t${s.inviteCount}\t${groupInviteRate.toFixed(2)}%\t${groupInvSatRatio}`);
+        lines.push(`${dateRange}\t组长\t${group}\t${leaderName}\t${s.sessions}\t${s.satisfied}\t${s.neutral}\t${s.dissatisfied}\t${satRate.toFixed(2)}%\t${neuRate.toFixed(2)}%\t${disRate.toFixed(2)}%\t${groupFirstResponseRate.toFixed(2)}%`);
       }
     });
 
@@ -1013,9 +1008,7 @@ export const ServiceQualityTool: React.FC = () => {
     const totalFirstResponseRate = allWithFirstResponse.length > 0
       ? allWithFirstResponse.reduce((sum, e) => sum + e.firstResponseRate60s * e.validSessions, 0) / (allWithFirstResponse.reduce((sum, e) => sum + e.validSessions, 0) || 1)
       : 0;
-    const totalInviteRate = totalSessions > 0 ? (totalInviteCount / totalSessions * 100) : 0;
-    const totalInvSatRatio = totalInviteCount > 0 ? (totalSatisfied / totalInviteCount).toFixed(2) : '-';
-    lines.push(`${dateRange}\t统计\t总计\t\t${totalSessions}\t${totalSatisfied}\t${totalNeutral}\t${totalDissatisfied}\t${totalSatRate.toFixed(2)}%\t${totalNeuRate.toFixed(2)}%\t${totalDisRate.toFixed(2)}%\t${totalFirstResponseRate.toFixed(2)}%\t${totalInviteCount}\t${totalInviteRate.toFixed(2)}%\t${totalInvSatRatio}`);
+    lines.push(`${dateRange}\t统计\t总计\t\t${totalSessions}\t${totalSatisfied}\t${totalNeutral}\t${totalDissatisfied}\t${totalSatRate.toFixed(2)}%\t${totalNeuRate.toFixed(2)}%\t${totalDisRate.toFixed(2)}%\t${totalFirstResponseRate.toFixed(2)}%`);
 
     navigator.clipboard.writeText(lines.join('\n'));
     toast.success('已复制到剪贴板');

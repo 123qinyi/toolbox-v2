@@ -2100,7 +2100,7 @@ export const ServiceQualityTool: React.FC = () => {
                           <td className="px-4 py-2 text-center font-medium">{e.satisfactionRate.toFixed(2)}%</td>
                           <td className="px-4 py-2 text-center">{e.neutralRate.toFixed(2)}%</td>
                           <td className="px-4 py-2 text-center">{e.dissatisfiedRate.toFixed(2)}%</td>
-                          <td className="px-4 py-2 text-center font-medium text-cyan-600">{e.firstResponseRate60s > 0 ? `${e.firstResponseRate60s.toFixed(2)}%` : '-'}</td>
+                          <td className="px-4 py-2 text-center font-medium text-cyan-600">{e.validSessions > 0 ? `${e.firstResponseRate60s.toFixed(2)}%` : '-'}</td>
                           <td className="px-4 py-2 text-center font-medium text-purple-600">{e.inviteCount}</td>
                           <td className="px-4 py-2 text-center text-purple-600">{e.inviteRate.toFixed(2)}%</td>
                           <td className="px-4 py-2 text-center font-medium text-indigo-600">{e.inviteCount > 0 ? `${e.inviteSatisfactionRatio.toFixed(2)}` : '-'}</td>

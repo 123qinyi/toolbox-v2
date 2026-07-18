@@ -54,18 +54,18 @@ const tools: Tool[] = [
     description: '客服质量数据分析与环比统计',
   },
   {
-    id: 'kpi',
-    name: 'KPI完成度分析',
-    icon: <BarChart3 className="w-5 h-5" />,
-    component: <KpiTool />,
-    description: '客服KPI考核完成度展示',
-  },
-  {
     id: 'top',
     name: 'TOP数据分析',
     icon: <TrendingUp className="w-5 h-5" />,
     component: <TopTool />,
     description: 'TOP数据分析与情绪分层统计',
+  },
+  {
+    id: 'kpi',
+    name: 'KPI完成度分析',
+    icon: <BarChart3 className="w-5 h-5" />,
+    component: <KpiTool />,
+    description: '客服KPI考核完成度展示',
   },
   {
     id: 'text',

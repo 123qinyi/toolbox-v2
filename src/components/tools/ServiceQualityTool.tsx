@@ -994,9 +994,9 @@ export const ServiceQualityTool: React.FC = () => {
         const satRate = (s.satisfied / s.sessions * 100);
         const neuRate = (s.neutral / s.sessions * 100);
         const disRate = (s.dissatisfied / s.sessions * 100);
-        const groupFirstResponse = sortedResult.filter(e => e.group === group && e.firstResponseRate60s > 0);
-        const groupFirstResponseRate = groupFirstResponse.length > 0
-          ? groupFirstResponse.reduce((sum, e) => sum + e.firstResponseRate60s * e.validSessions, 0) / (groupFirstResponse.reduce((sum, e) => sum + e.validSessions, 0) || 1)
+        const groupMembers = sortedResult.filter(e => e.group === group);
+        const groupFirstResponseRate = groupMembers.length > 0 && s.sessions > 0
+          ? groupMembers.reduce((sum, e) => sum + e.firstResponseRate60s * e.validSessions, 0) / s.sessions
           : 0;
         const leaderName = groupLeaderMap[group] || '';
         lines.push(`${dateRange}\t组长\t${group}\t${leaderName}\t${s.sessions}\t${s.satisfied}\t${s.neutral}\t${s.dissatisfied}\t${satRate.toFixed(2)}%\t${neuRate.toFixed(2)}%\t${disRate.toFixed(2)}%\t${groupFirstResponseRate.toFixed(2)}%`);
@@ -1006,9 +1006,8 @@ export const ServiceQualityTool: React.FC = () => {
     const totalSatRate = totalSessions > 0 ? (totalSatisfied / totalSessions * 100) : 0;
     const totalNeuRate = totalSessions > 0 ? (totalNeutral / totalSessions * 100) : 0;
     const totalDisRate = totalSessions > 0 ? (totalDissatisfied / totalSessions * 100) : 0;
-    const allWithFirstResponse = sortedResult.filter(e => e.firstResponseRate60s > 0);
-    const totalFirstResponseRate = allWithFirstResponse.length > 0
-      ? allWithFirstResponse.reduce((sum, e) => sum + e.firstResponseRate60s * e.validSessions, 0) / (allWithFirstResponse.reduce((sum, e) => sum + e.validSessions, 0) || 1)
+    const totalFirstResponseRate = totalSessions > 0
+      ? sortedResult.reduce((sum, e) => sum + e.firstResponseRate60s * e.validSessions, 0) / totalSessions
       : 0;
     lines.push(`${dateRange}\t统计\t总计\t\t${totalSessions}\t${totalSatisfied}\t${totalNeutral}\t${totalDissatisfied}\t${totalSatRate.toFixed(2)}%\t${totalNeuRate.toFixed(2)}%\t${totalDisRate.toFixed(2)}%\t${totalFirstResponseRate.toFixed(2)}%`);
 
@@ -1060,9 +1059,9 @@ export const ServiceQualityTool: React.FC = () => {
         const satRate = (s.satisfied / s.sessions * 100);
         const neuRate = (s.neutral / s.sessions * 100);
         const disRate = (s.dissatisfied / s.sessions * 100);
-        const groupFirstResponse = sortedResult.filter(e => e.group === group && e.firstResponseRate60s > 0);
-        const groupFirstResponseRate = groupFirstResponse.length > 0
-          ? groupFirstResponse.reduce((sum, e) => sum + e.firstResponseRate60s * e.validSessions, 0) / (groupFirstResponse.reduce((sum, e) => sum + e.validSessions, 0) || 1)
+        const groupMembers = sortedResult.filter(e => e.group === group);
+        const groupFirstResponseRate = groupMembers.length > 0 && s.sessions > 0
+          ? groupMembers.reduce((sum, e) => sum + e.firstResponseRate60s * e.validSessions, 0) / s.sessions
           : 0;
         const groupInviteRate = s.sessions > 0 ? (s.inviteCount / s.sessions * 100) : 0;
         const groupInvSatRatio = s.inviteCount > 0 ? (s.satisfied / s.inviteCount).toFixed(2) : '-';
@@ -1074,9 +1073,8 @@ export const ServiceQualityTool: React.FC = () => {
     const totalSatRate = totalSessions > 0 ? (totalSatisfied / totalSessions * 100) : 0;
     const totalNeuRate = totalSessions > 0 ? (totalNeutral / totalSessions * 100) : 0;
     const totalDisRate = totalSessions > 0 ? (totalDissatisfied / totalSessions * 100) : 0;
-    const allWithFirstResponse = sortedResult.filter(e => e.firstResponseRate60s > 0);
-    const totalFirstResponseRate = allWithFirstResponse.length > 0
-      ? allWithFirstResponse.reduce((sum, e) => sum + e.firstResponseRate60s * e.validSessions, 0) / (allWithFirstResponse.reduce((sum, e) => sum + e.validSessions, 0) || 1)
+    const totalFirstResponseRate = totalSessions > 0
+      ? sortedResult.reduce((sum, e) => sum + e.firstResponseRate60s * e.validSessions, 0) / totalSessions
       : 0;
     const totalInviteRate = totalSessions > 0 ? (totalInviteCount / totalSessions * 100) : 0;
     const totalInvSatRatio = totalInviteCount > 0 ? (totalSatisfied / totalInviteCount).toFixed(2) : '-';

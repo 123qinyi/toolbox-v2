@@ -112,7 +112,8 @@ interface EmployeeQuality {
   dissatisfiedRate: number;
   avgResponseTime: number; // 平均响应时间（秒）
   responseRate60s: number; // 60秒应答率（%）
-  firstResponseRate60s: number; // 首响60秒应答率（%）
+  firstResponseRate60s: number; // 首响60秒应答率（%）- 仅统计用户发起的会话
+  userInitiatedSessions: number; // 用户发起的会话数（首响率分母）
   inviteCount: number; // 主动邀评数
   inviteRate: number; // 主动邀评率（%）
   inviteSatisfactionRatio: number; // 邀评满意转化比（满意数/主动邀评数）
@@ -604,6 +605,7 @@ export const ServiceQualityTool: React.FC = () => {
     const timeIndex = findColumnIndex(headers, ['会话开始时间', '开始时间']);
     const groupIndex = findColumnIndex(headers, ['分流客服组', '客服组']);
     const responseTimeIndex = findColumnIndex(headers, ['客服首次响应时长', '首次响应时长', '首响时间', '响应时长']);
+    const initiatorIndex = findColumnIndex(headers, ['会话发起方', '发起方']);
     const inviteIndex = findColumnIndex(headers, ['客服是否邀评', '是否邀评']);
 
     if (agentIndex === -1) {
@@ -641,6 +643,7 @@ export const ServiceQualityTool: React.FC = () => {
       dissatisfied: number;
       group: string;
       within60s: number;
+      userInitiatedTotal: number;
       inviteCount: number;
     }>();
 
@@ -657,9 +660,10 @@ export const ServiceQualityTool: React.FC = () => {
       const satisfaction = parts[satisfactionIndex]?.trim() || '';
       const groupRaw = groupIndex !== -1 ? parts[groupIndex]?.trim() || '' : '';
 
-      // 统计首响60秒（"--"或空值算未达标，计入分母不计分子）
+      // 统计首响60秒（只统计用户发起的会话，"--"或空值算未达标）
+      const isUserInitiated = initiatorIndex !== -1 ? (parts[initiatorIndex]?.trim() === '用户') : true;
       let within60s = false;
-      if (responseTimeIndex !== -1) {
+      if (isUserInitiated && responseTimeIndex !== -1) {
         const responseTimeStr = parts[responseTimeIndex]?.trim();
         if (responseTimeStr && responseTimeStr !== '--') {
           const seconds = timeToSeconds(responseTimeStr);
@@ -681,12 +685,15 @@ export const ServiceQualityTool: React.FC = () => {
       }
 
       if (!agentMap.has(name)) {
-        agentMap.set(name, { validSessions: 0, satisfied: 0, neutral: 0, dissatisfied: 0, group: groupRaw, within60s: 0, inviteCount: 0 });
+        agentMap.set(name, { validSessions: 0, satisfied: 0, neutral: 0, dissatisfied: 0, group: groupRaw, within60s: 0, userInitiatedTotal: 0, inviteCount: 0 });
       }
       const agent = agentMap.get(name)!;
       agent.validSessions++;
 
-      if (within60s) agent.within60s++;
+      if (isUserInitiated) {
+        agent.userInitiatedTotal++;
+        if (within60s) agent.within60s++;
+      }
 
       if (invited) agent.inviteCount++;
 
@@ -714,10 +721,11 @@ export const ServiceQualityTool: React.FC = () => {
       }
 
       const validSessions = stats.validSessions || 1;
+      const userInitiatedSessions = stats.userInitiatedTotal;
       const inviteCount = stats.inviteCount;
       const inviteRate = (inviteCount / validSessions) * 100;
       const inviteSatisfactionRatio = inviteCount > 0 ? stats.satisfied / inviteCount : 0;
-      const firstResponseRate60s = responseTimeIndex !== -1 ? (stats.within60s / validSessions) * 100 : 0;
+      const firstResponseRate60s = (responseTimeIndex !== -1 && userInitiatedSessions > 0) ? (stats.within60s / userInitiatedSessions) * 100 : 0;
 
       data.push({
         id: `eq_${Date.now()}_${Math.random()}`,
@@ -734,6 +742,7 @@ export const ServiceQualityTool: React.FC = () => {
         avgResponseTime: 0,
         responseRate60s: 0,
         firstResponseRate60s,
+        userInitiatedSessions,
         inviteCount,
         inviteRate,
         inviteSatisfactionRatio,
@@ -808,6 +817,7 @@ export const ServiceQualityTool: React.FC = () => {
             avgResponseTime: quality.avgResponseTime,
             responseRate60s: quality.responseRate60s,
             firstResponseRate60s: fr?.firstResponseRate60s || 0,
+            userInitiatedSessions: 0,
             inviteCount: 0,
             inviteRate: 0,
             inviteSatisfactionRatio: 0,
@@ -995,8 +1005,9 @@ export const ServiceQualityTool: React.FC = () => {
         const neuRate = (s.neutral / s.sessions * 100);
         const disRate = (s.dissatisfied / s.sessions * 100);
         const groupMembers = sortedResult.filter(e => e.group === group);
-        const groupFirstResponseRate = groupMembers.length > 0 && s.sessions > 0
-          ? groupMembers.reduce((sum, e) => sum + e.firstResponseRate60s * e.validSessions, 0) / s.sessions
+        const groupUserInitiated = groupMembers.reduce((sum, e) => sum + (e.userInitiatedSessions ?? 0), 0);
+        const groupFirstResponseRate = groupUserInitiated > 0
+          ? groupMembers.reduce((sum, e) => sum + e.firstResponseRate60s * (e.userInitiatedSessions ?? 0), 0) / groupUserInitiated
           : 0;
         const leaderName = groupLeaderMap[group] || '';
         lines.push(`${dateRange}\t组长\t${group}\t${leaderName}\t${s.sessions}\t${s.satisfied}\t${s.neutral}\t${s.dissatisfied}\t${satRate.toFixed(2)}%\t${neuRate.toFixed(2)}%\t${disRate.toFixed(2)}%\t${groupFirstResponseRate.toFixed(2)}%`);
@@ -1006,8 +1017,9 @@ export const ServiceQualityTool: React.FC = () => {
     const totalSatRate = totalSessions > 0 ? (totalSatisfied / totalSessions * 100) : 0;
     const totalNeuRate = totalSessions > 0 ? (totalNeutral / totalSessions * 100) : 0;
     const totalDisRate = totalSessions > 0 ? (totalDissatisfied / totalSessions * 100) : 0;
-    const totalFirstResponseRate = totalSessions > 0
-      ? sortedResult.reduce((sum, e) => sum + e.firstResponseRate60s * e.validSessions, 0) / totalSessions
+    const totalUserInitiated = sortedResult.reduce((sum, e) => sum + (e.userInitiatedSessions ?? 0), 0);
+    const totalFirstResponseRate = totalUserInitiated > 0
+      ? sortedResult.reduce((sum, e) => sum + e.firstResponseRate60s * (e.userInitiatedSessions ?? 0), 0) / totalUserInitiated
       : 0;
     lines.push(`${dateRange}\t统计\t总计\t\t${totalSessions}\t${totalSatisfied}\t${totalNeutral}\t${totalDissatisfied}\t${totalSatRate.toFixed(2)}%\t${totalNeuRate.toFixed(2)}%\t${totalDisRate.toFixed(2)}%\t${totalFirstResponseRate.toFixed(2)}%`);
 
@@ -1060,8 +1072,9 @@ export const ServiceQualityTool: React.FC = () => {
         const neuRate = (s.neutral / s.sessions * 100);
         const disRate = (s.dissatisfied / s.sessions * 100);
         const groupMembers = sortedResult.filter(e => e.group === group);
-        const groupFirstResponseRate = groupMembers.length > 0 && s.sessions > 0
-          ? groupMembers.reduce((sum, e) => sum + e.firstResponseRate60s * e.validSessions, 0) / s.sessions
+        const groupUserInitiated = groupMembers.reduce((sum, e) => sum + (e.userInitiatedSessions ?? 0), 0);
+        const groupFirstResponseRate = groupUserInitiated > 0
+          ? groupMembers.reduce((sum, e) => sum + e.firstResponseRate60s * (e.userInitiatedSessions ?? 0), 0) / groupUserInitiated
           : 0;
         const groupInviteRate = s.sessions > 0 ? (s.inviteCount / s.sessions * 100) : 0;
         const groupInvSatRatio = s.inviteCount > 0 ? (s.satisfied / s.inviteCount).toFixed(2) : '-';
@@ -1073,8 +1086,9 @@ export const ServiceQualityTool: React.FC = () => {
     const totalSatRate = totalSessions > 0 ? (totalSatisfied / totalSessions * 100) : 0;
     const totalNeuRate = totalSessions > 0 ? (totalNeutral / totalSessions * 100) : 0;
     const totalDisRate = totalSessions > 0 ? (totalDissatisfied / totalSessions * 100) : 0;
-    const totalFirstResponseRate = totalSessions > 0
-      ? sortedResult.reduce((sum, e) => sum + e.firstResponseRate60s * e.validSessions, 0) / totalSessions
+    const totalUserInitiated = sortedResult.reduce((sum, e) => sum + (e.userInitiatedSessions ?? 0), 0);
+    const totalFirstResponseRate = totalUserInitiated > 0
+      ? sortedResult.reduce((sum, e) => sum + e.firstResponseRate60s * (e.userInitiatedSessions ?? 0), 0) / totalUserInitiated
       : 0;
     const totalInviteRate = totalSessions > 0 ? (totalInviteCount / totalSessions * 100) : 0;
     const totalInvSatRatio = totalInviteCount > 0 ? (totalSatisfied / totalInviteCount).toFixed(2) : '-';
@@ -1125,10 +1139,16 @@ export const ServiceQualityTool: React.FC = () => {
       : 0;
 
     const lastAvgFirstResponse60s = lastWeekData.length > 0
-      ? lastWeekData.reduce((sum, e) => sum + e.firstResponseRate60s * e.validSessions, 0) / (lastWeekData.reduce((sum, e) => sum + e.validSessions, 0) || 1)
+      ? (() => {
+          const totalUI = lastWeekData.reduce((sum, e) => sum + (e.userInitiatedSessions ?? 0), 0);
+          return totalUI > 0 ? lastWeekData.reduce((sum, e) => sum + e.firstResponseRate60s * (e.userInitiatedSessions ?? 0), 0) / totalUI : 0;
+        })()
       : 0;
     const thisAvgFirstResponse60s = thisWeekData.length > 0
-      ? thisWeekData.reduce((sum, e) => sum + e.firstResponseRate60s * e.validSessions, 0) / (thisWeekData.reduce((sum, e) => sum + e.validSessions, 0) || 1)
+      ? (() => {
+          const totalUI = thisWeekData.reduce((sum, e) => sum + (e.userInitiatedSessions ?? 0), 0);
+          return totalUI > 0 ? thisWeekData.reduce((sum, e) => sum + e.firstResponseRate60s * (e.userInitiatedSessions ?? 0), 0) / totalUI : 0;
+        })()
       : 0;
 
     const calcChange = (current: number, last: number) => {
@@ -1337,7 +1357,8 @@ export const ServiceQualityTool: React.FC = () => {
       const totalDissatisfied = data.reduce((sum, e) => sum + e.dissatisfied, 0);
       const totalResponseTime = data.reduce((sum, e) => sum + e.avgResponseTime * e.validSessions, 0);
       const totalResponse60s = data.reduce((sum, e) => sum + e.responseRate60s * e.validSessions, 0);
-      const totalFirstResponse60s = data.reduce((sum, e) => sum + e.firstResponseRate60s * e.validSessions, 0);
+      const totalUserInitiated = data.reduce((sum, e) => sum + (e.userInitiatedSessions ?? 0), 0);
+      const totalFirstResponse60s = data.reduce((sum, e) => sum + e.firstResponseRate60s * (e.userInitiatedSessions ?? 0), 0);
 
       return {
         totalSessions,
@@ -1345,7 +1366,7 @@ export const ServiceQualityTool: React.FC = () => {
         dissatisfied: totalDissatisfied,
         avgResponseTime: totalSessions > 0 ? totalResponseTime / totalSessions : 0,
         responseRate60s: totalSessions > 0 ? totalResponse60s / totalSessions : 0,
-        firstResponseRate60s: totalSessions > 0 ? totalFirstResponse60s / totalSessions : 0,
+        firstResponseRate60s: totalUserInitiated > 0 ? totalFirstResponse60s / totalUserInitiated : 0,
       };
     };
 
@@ -1386,6 +1407,7 @@ export const ServiceQualityTool: React.FC = () => {
   const handleLoadHistory = useCallback((history: QualityHistory) => {
     const normalizedData = history.data.map(e => ({
       ...e,
+      userInitiatedSessions: e.userInitiatedSessions ?? 0,
       inviteCount: e.inviteCount ?? 0,
       inviteRate: e.inviteRate ?? 0,
       inviteSatisfactionRatio: e.inviteSatisfactionRatio ?? 0,
@@ -1400,6 +1422,7 @@ export const ServiceQualityTool: React.FC = () => {
   const handleLoadHistoryForComparison = useCallback((history: QualityHistory) => {
     const normalizedData = history.data.map(e => ({
       ...e,
+      userInitiatedSessions: e.userInitiatedSessions ?? 0,
       inviteCount: e.inviteCount ?? 0,
       inviteRate: e.inviteRate ?? 0,
       inviteSatisfactionRatio: e.inviteSatisfactionRatio ?? 0,
@@ -1581,7 +1604,7 @@ export const ServiceQualityTool: React.FC = () => {
                   <div className="space-y-2">
                     <label className="text-sm font-medium">会话明细报表</label>
                     <Textarea
-                      placeholder={`会话开始时间\t客服首次响应时长\t接待客服\t访客用户名\t满意度\t邀评来源\t客服是否邀评`}
+                      placeholder={`会话开始时间\t客服首次响应时长\t会话发起方\t接待客服\t访客用户名\t满意度\t邀评来源\t客服是否邀评`}
                       value={sessionInput}
                       onChange={(e) => setSessionInput(e.target.value)}
                       className="h-[200px] max-h-[300px] overflow-y-auto font-mono text-sm resize-none"
@@ -2100,7 +2123,7 @@ export const ServiceQualityTool: React.FC = () => {
                           <td className="px-4 py-2 text-center font-medium">{e.satisfactionRate.toFixed(2)}%</td>
                           <td className="px-4 py-2 text-center">{e.neutralRate.toFixed(2)}%</td>
                           <td className="px-4 py-2 text-center">{e.dissatisfiedRate.toFixed(2)}%</td>
-                          <td className="px-4 py-2 text-center font-medium text-cyan-600">{e.validSessions > 0 ? `${e.firstResponseRate60s.toFixed(2)}%` : '-'}</td>
+                          <td className="px-4 py-2 text-center font-medium text-cyan-600">{(e.userInitiatedSessions ?? 0) > 0 ? `${e.firstResponseRate60s.toFixed(2)}%` : '-'}</td>
                           <td className="px-4 py-2 text-center font-medium text-purple-600">{e.inviteCount}</td>
                           <td className="px-4 py-2 text-center text-purple-600">{e.inviteRate.toFixed(2)}%</td>
                           <td className="px-4 py-2 text-center font-medium text-indigo-600">{e.inviteCount > 0 ? `${e.inviteSatisfactionRatio.toFixed(2)}` : '-'}</td>

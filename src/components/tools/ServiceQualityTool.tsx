@@ -657,12 +657,14 @@ export const ServiceQualityTool: React.FC = () => {
       const satisfaction = parts[satisfactionIndex]?.trim() || '';
       const groupRaw = groupIndex !== -1 ? parts[groupIndex]?.trim() || '' : '';
 
-      // 统计首响60秒
+      // 统计首响60秒（"--"或空值算未达标，计入分母不计分子）
       let within60s = false;
       if (responseTimeIndex !== -1) {
-        const responseTimeStr = parts[responseTimeIndex]?.trim() || '00:00:00';
-        const seconds = timeToSeconds(responseTimeStr);
-        if (seconds <= 60) within60s = true;
+        const responseTimeStr = parts[responseTimeIndex]?.trim();
+        if (responseTimeStr && responseTimeStr !== '--') {
+          const seconds = timeToSeconds(responseTimeStr);
+          if (seconds <= 60) within60s = true;
+        }
       }
 
       // 统计邀评

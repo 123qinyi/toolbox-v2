@@ -4,9 +4,7 @@ read_when:
   - Bootstrapping a workspace manually
 ---
 
-# USER.md - About Your Human
-
-- **Name:** 孙泽沁
+# USER.md - About Your Human- **Name:** 泽沁
 - **What to call them:** 泽沁
 - **Pronouns:** 他
 - **City:** （待补充）

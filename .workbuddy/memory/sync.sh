@@ -10,7 +10,7 @@
 #
 # 日常切换：
 #   离开设备A：bash .workbuddy/memory/sync.sh
-#   到了设备B：bash .workbuddy/memory/sync.sh（自动拉取A的最新内容并恢复到本地）
+#   到了设备B：bash .workbuddy/memory/sync.sh
 
 # ===== 路径定义 =====
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -25,19 +25,65 @@ GIT_EMAIL="sunzeqin@enjoymi.com"
 FETCH_URL="https://gh-proxy.com/https://github.com/123qinyi/toolbox-v2.git"
 PUSH_URL_BASE="https://github.com/123qinyi/toolbox-v2.git"
 
-# 身份文件映射：repo 备份名 → 用户级文件名
-declare -A IDENTITY=(
-  ["USER_MEMORY_BACKUP.md"]="MEMORY.md"
-  ["SOUL_BACKUP.md"]="SOUL.md"
-  ["IDENTITY_BACKUP.md"]="IDENTITY.md"
-  ["USER_BACKUP.md"]="USER.md"
-)
+# 身份文件配对（备份名:原始名）
+BACKUP_FILES="USER_MEMORY_BACKUP.md:MEMORY.md SOUL_BACKUP.md:SOUL.md IDENTITY_BACKUP.md:IDENTITY.md USER_BACKUP.md:USER.md"
 
 # ===== 健全性检查 =====
 if [ ! -d "$REPO_ROOT/.git" ]; then
   echo "错误：未找到 Git 仓库，请确保在 toolbox-v2 项目内运行"
   exit 1
 fi
+
+# ===== 辅助函数 =====
+restore_identity() {
+  for pair in $BACKUP_FILES; do
+    backup="${pair%%:*}"
+    original="${pair##*:}"
+    src="$SCRIPT_DIR/$backup"
+    dst="$USER_WB/$original"
+    if [ -f "$src" ]; then
+      cp "$src" "$dst"
+      echo "  $backup -> ~/.workbuddy/$original"
+    fi
+  done
+}
+
+backup_identity() {
+  for pair in $BACKUP_FILES; do
+    backup="${pair%%:*}"
+    original="${pair##*:}"
+    src="$USER_WB/$original"
+    dst="$SCRIPT_DIR/$backup"
+    if [ -f "$src" ]; then
+      cp "$src" "$dst"
+      echo "  $original -> $backup"
+    fi
+  done
+}
+
+restore_logs() {
+  mkdir -p "$WORKSPACE_MEMORY"
+  for f in "$SCRIPT_DIR"/2026-*.md "$SCRIPT_DIR"/MEMORY.md; do
+    if [ -f "$f" ]; then
+      fname="$(basename "$f")"
+      cp "$f" "$WORKSPACE_MEMORY/$fname"
+      echo "  $fname -> 工作区日志"
+    fi
+  done
+}
+
+backup_logs() {
+  if [ -d "$WORKSPACE_MEMORY" ]; then
+    for f in "$WORKSPACE_MEMORY"/*.md; do
+      if [ -f "$f" ]; then
+        cp "$f" "$SCRIPT_DIR/$(basename "$f")"
+        echo "  $(basename "$f")"
+      fi
+    done
+  else
+    echo "  工作区日志目录不存在，跳过"
+  fi
+}
 
 # ===== 模式检测 =====
 if [ -f "$USER_WB/MEMORY.md" ]; then
@@ -59,22 +105,8 @@ if [ "$MODE" = "sync" ]; then
 
   # 1. 备份本地身份文件 + 工作区日志到 repo
   echo "[1/4] 备份本地文件..."
-  for backup in "${!IDENTITY[@]}"; do
-    src="$USER_WB/${IDENTITY[$backup]}"
-    if [ -f "$src" ]; then
-      cp "$src" "$SCRIPT_DIR/$backup"
-      echo "  ${IDENTITY[$backup]} -> $backup"
-    fi
-  done
-  if [ -d "$WORKSPACE_MEMORY" ]; then
-    for f in "$WORKSPACE_MEMORY"/*.md; do
-      [ -f "$f" ] || continue
-      cp "$f" "$SCRIPT_DIR/$(basename "$f")"
-      echo "  $(basename "$f")"
-    done
-  else
-    echo "  工作区日志目录不存在，跳过"
-  fi
+  backup_identity
+  backup_logs
 
   # 2. 提交本地变更 + 拉取远程
   echo "[2/4] 提交本地变更并拉取远程..."
@@ -98,24 +130,8 @@ if [ "$MODE" = "sync" ]; then
 
   # 3. 恢复 repo 文件到本地（获取其他设备的最新版本）
   echo "[3/4] 恢复到本地..."
-  for backup in "${!IDENTITY[@]}"; do
-    src="$SCRIPT_DIR/$backup"
-    dst="$USER_WB/${IDENTITY[$backup]}"
-    if [ -f "$src" ]; then
-      cp "$src" "$dst"
-      echo "  $backup -> ~/.workbuddy/${IDENTITY[$backup]}"
-    fi
-  done
-  mkdir -p "$WORKSPACE_MEMORY"
-  for f in "$SCRIPT_DIR"/*.md; do
-    [ -f "$f" ] || continue
-    fname="$(basename "$f")"
-    [ -z "$fname" ] && continue
-    if [[ "$fname" == *_BACKUP.md ]]; then
-      continue
-    fi
-    cp "$f" "$WORKSPACE_MEMORY/$fname" 2>/dev/null && echo "  $fname -> 工作区日志" || echo "  [跳过] $fname"
-  done
+  restore_identity
+  restore_logs
 
   # 4. 推送
   echo "[4/4] 推送..."
@@ -141,29 +157,11 @@ else
   # 1. 恢复身份文件
   echo "[1/5] 恢复身份文件..."
   mkdir -p "$USER_WB"
-  for backup in "${!IDENTITY[@]}"; do
-    src="$SCRIPT_DIR/$backup"
-    dst="$USER_WB/${IDENTITY[$backup]}"
-    if [ -f "$src" ]; then
-      cp "$src" "$dst"
-      echo "  $backup -> ~/.workbuddy/${IDENTITY[$backup]}"
-    else
-      echo "  [跳过] $backup 不存在"
-    fi
-  done
+  restore_identity
 
   # 2. 恢复工作区日志
   echo "[2/5] 恢复工作区日志..."
-  mkdir -p "$WORKSPACE_MEMORY"
-  for f in "$SCRIPT_DIR"/*.md; do
-    [ -f "$f" ] || continue
-    fname="$(basename "$f")"
-    [ -z "$fname" ] && continue
-    if [[ "$fname" == *_BACKUP.md ]]; then
-      continue
-    fi
-    cp "$f" "$WORKSPACE_MEMORY/$fname" 2>/dev/null && echo "  $fname" || echo "  [跳过] $fname"
-  done
+  restore_logs
 
   # 3. 配置 Git 全局 + 凭据管理
   echo "[3/5] 配置 Git..."
@@ -173,7 +171,6 @@ else
   echo "  user.name=$GIT_NAME  user.email=$GIT_EMAIL"
 
   # 凭据管理：清除 PortableGit 自带的 GCM，改用 store
-  # 空字符串清除系统级继承的 helper，再添加 store 为唯一 helper
   git config --global credential.helper ""
   git config --global --add credential.helper store
   echo "  credential.helper=store（已清除 GCM 干扰）"
@@ -188,12 +185,10 @@ else
 
   PAT="${1:-${GITHUB_PAT:-}}"
   if [ -n "$PAT" ]; then
-    # 写入 .git-credentials（store helper 会自动读取）
     CRED_FILE="$HOME/.git-credentials"
     echo "https://$GIT_NAME:${PAT}@github.com" > "$CRED_FILE"
     chmod 600 "$CRED_FILE" 2>/dev/null
     echo "  PAT 已写入 ~/.git-credentials"
-    # 验证认证
     if git ls-remote --heads origin > /dev/null 2>&1; then
       echo "  认证验证通过"
     else

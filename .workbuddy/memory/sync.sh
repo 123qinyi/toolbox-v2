@@ -22,7 +22,7 @@ USER_WB="$HOME/.workbuddy"
 # ===== 常量 =====
 GIT_NAME="123qinyi"
 GIT_EMAIL="sunzeqin@enjoymi.com"
-FETCH_URL="https://gh-proxy.com/https://github.com/123qinyi/toolbox-v2.git"
+FETCH_URL="https://github.com/123qinyi/toolbox-v2.git"
 PUSH_URL_BASE="https://github.com/123qinyi/toolbox-v2.git"
 
 # 身份文件配对（备份名:原始名）
@@ -138,7 +138,7 @@ if [ "$MODE" = "sync" ]; then
   git push origin main 2>&1
   if [ $? -eq 0 ]; then
     echo "  推送成功"
-    # 更新本地 tracking ref（push 走直连，fetch 走镜像，需要手动同步）
+    # 更新本地 tracking ref
     git fetch "$PUSH_URL_BASE" main:refs/remotes/origin/main 2>/dev/null || true
   else
     echo "  [警告] 推送失败（可能是网络问题），本地变更已保存，可稍后重试"
@@ -178,7 +178,7 @@ else
   git config --global --add credential.helper store
   echo "  credential.helper=store（已清除 GCM 干扰）"
 
-  # 4. 配置 remote（fetch 走代理，push 走直连）+ 写入凭据
+  # 4. 配置 remote（直连 GitHub）+ 写入凭据
   echo "[4/5] 配置 Git remote..."
   cd "$REPO_ROOT"
   git remote set-url origin "$FETCH_URL"

@@ -63,7 +63,7 @@ backup_identity() {
 
 restore_logs() {
   mkdir -p "$WORKSPACE_MEMORY"
-  for f in "$SCRIPT_DIR"/2026-*.md "$SCRIPT_DIR"/MEMORY.md; do
+  for f in "$SCRIPT_DIR"/20*-*.md "$SCRIPT_DIR"/MEMORY.md; do
     if [ -f "$f" ]; then
       fname="$(basename "$f")"
       cp "$f" "$WORKSPACE_MEMORY/$fname"

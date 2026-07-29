@@ -12,8 +12,6 @@
 #   离开设备A：bash .workbuddy/memory/sync.sh
 #   到了设备B：bash .workbuddy/memory/sync.sh（自动拉取A的最新内容并恢复到本地）
 
-set -e
-
 # ===== 路径定义 =====
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"

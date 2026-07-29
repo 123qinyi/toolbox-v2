@@ -110,9 +110,11 @@ if [ "$MODE" = "sync" ]; then
   for f in "$SCRIPT_DIR"/*.md; do
     [ -f "$f" ] || continue
     fname="$(basename "$f")"
-    [[ "$fname" == *_BACKUP.md ]] && continue
-    cp "$f" "$WORKSPACE_MEMORY/$fname"
-    echo "  $fname -> 工作区日志"
+    [ -z "$fname" ] && continue
+    if [[ "$fname" == *_BACKUP.md ]]; then
+      continue
+    fi
+    cp "$f" "$WORKSPACE_MEMORY/$fname" 2>/dev/null && echo "  $fname -> 工作区日志" || echo "  [跳过] $fname"
   done
 
   # 4. 推送
@@ -156,9 +158,11 @@ else
   for f in "$SCRIPT_DIR"/*.md; do
     [ -f "$f" ] || continue
     fname="$(basename "$f")"
-    [[ "$fname" == *_BACKUP.md ]] && continue
-    cp "$f" "$WORKSPACE_MEMORY/$fname"
-    echo "  $fname"
+    [ -z "$fname" ] && continue
+    if [[ "$fname" == *_BACKUP.md ]]; then
+      continue
+    fi
+    cp "$f" "$WORKSPACE_MEMORY/$fname" 2>/dev/null && echo "  $fname" || echo "  [跳过] $fname"
   done
 
   # 3. 配置 Git 全局 + 凭据管理

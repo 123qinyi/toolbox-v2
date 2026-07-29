@@ -36,6 +36,7 @@ fi
 
 # ===== 辅助函数 =====
 restore_identity() {
+  local n=0
   for pair in $BACKUP_FILES; do
     backup="${pair%%:*}"
     original="${pair##*:}"
@@ -43,12 +44,14 @@ restore_identity() {
     dst="$USER_WB/$original"
     if [ -f "$src" ]; then
       cp "$src" "$dst"
-      echo "  $backup -> ~/.workbuddy/$original"
+      n=$((n+1))
     fi
   done
+  echo "  $n 个身份文件"
 }
 
 backup_identity() {
+  local n=0
   for pair in $BACKUP_FILES; do
     backup="${pair%%:*}"
     original="${pair##*:}"
@@ -56,33 +59,36 @@ backup_identity() {
     dst="$SCRIPT_DIR/$backup"
     if [ -f "$src" ]; then
       cp "$src" "$dst"
-      echo "  $original -> $backup"
+      n=$((n+1))
     fi
   done
+  echo "  $n 个身份文件"
 }
 
 restore_logs() {
+  local n=0
   mkdir -p "$WORKSPACE_MEMORY"
   for f in "$SCRIPT_DIR"/20*-*.md "$SCRIPT_DIR"/MEMORY.md; do
     if [ -f "$f" ]; then
       fname="$(basename "$f")"
       cp "$f" "$WORKSPACE_MEMORY/$fname"
-      echo "  $fname -> 工作区日志"
+      n=$((n+1))
     fi
   done
+  echo "  $n 个日志文件"
 }
 
 backup_logs() {
+  local n=0
   if [ -d "$WORKSPACE_MEMORY" ]; then
     for f in "$WORKSPACE_MEMORY"/*.md; do
       if [ -f "$f" ]; then
         cp "$f" "$SCRIPT_DIR/$(basename "$f")"
-        echo "  $(basename "$f")"
+        n=$((n+1))
       fi
     done
-  else
-    echo "  工作区日志目录不存在，跳过"
   fi
+  echo "  $n 个日志文件"
 }
 
 # ===== 模式检测 =====

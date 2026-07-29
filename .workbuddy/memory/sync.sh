@@ -135,8 +135,11 @@ if [ "$MODE" = "sync" ]; then
 
   # 4. 推送
   echo "[4/4] 推送..."
-  if git push origin main 2>/dev/null; then
+  git push origin main 2>&1
+  if [ $? -eq 0 ]; then
     echo "  推送成功"
+    # 更新本地 tracking ref（push 走直连，fetch 走镜像，需要手动同步）
+    git fetch "$PUSH_URL_BASE" main:refs/remotes/origin/main 2>/dev/null || true
   else
     echo "  [警告] 推送失败（可能是网络问题），本地变更已保存，可稍后重试"
   fi

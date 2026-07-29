@@ -125,30 +125,43 @@ else
     echo "  $fname"
   done
 
-  # 3. 配置 Git 全局
+  # 3. 配置 Git 全局 + 凭据管理
   echo "[3/5] 配置 Git..."
   git config --global user.name "$GIT_NAME"
   git config --global user.email "$GIT_EMAIL"
   git config --global http.postBuffer 524288000
   echo "  user.name=$GIT_NAME  user.email=$GIT_EMAIL"
 
-  # 4. 配置 remote（fetch 走代理，push 走直连 + PAT）
+  # 凭据管理：清除 PortableGit 自带的 GCM，改用 store
+  # 空字符串清除系统级继承的 helper，再添加 store 为唯一 helper
+  git config --global credential.helper ""
+  git config --global --add credential.helper store
+  echo "  credential.helper=store（已清除 GCM 干扰）"
+
+  # 4. 配置 remote（fetch 走代理，push 走直连）+ 写入凭据
   echo "[4/5] 配置 Git remote..."
   cd "$REPO_ROOT"
   git remote set-url origin "$FETCH_URL"
+  git remote set-url --push origin "$PUSH_URL_BASE"
+  echo "  fetch=$FETCH_URL"
+  echo "  push=$PUSH_URL_BASE"
 
   PAT="${1:-${GITHUB_PAT:-}}"
-  CURRENT_PUSH=$(git remote get-url --push origin 2>/dev/null || echo "")
   if [ -n "$PAT" ]; then
-    git remote set-url --push origin "https://$GIT_NAME:${PAT}@github.com/123qinyi/toolbox-v2.git"
-    echo "  push URL 已配置（使用提供的 PAT）"
-  elif echo "$CURRENT_PUSH" | grep -qE "github_pat_|ghp_"; then
-    echo "  push URL 已包含认证，跳过"
+    # 写入 .git-credentials（store helper 会自动读取）
+    CRED_FILE="$HOME/.git-credentials"
+    echo "https://$GIT_NAME:${PAT}@github.com" > "$CRED_FILE"
+    chmod 600 "$CRED_FILE" 2>/dev/null
+    echo "  PAT 已写入 ~/.git-credentials"
+    # 验证认证
+    if git ls-remote --heads origin > /dev/null 2>&1; then
+      echo "  认证验证通过"
+    else
+      echo "  [警告] 认证验证失败，请检查 PAT 是否有效"
+    fi
   else
-    git remote set-url --push origin "$PUSH_URL_BASE"
-    echo "  [需手动配置 PAT] 请执行以下任一方式："
+    echo "  [需手动配置 PAT] 请执行："
     echo "    GITHUB_PAT=你的token bash .workbuddy/memory/sync.sh"
-    echo "    git remote set-url --push origin https://$GIT_NAME:你的token@github.com/123qinyi/toolbox-v2.git"
   fi
 
   # 5. 安装依赖 + build 验证

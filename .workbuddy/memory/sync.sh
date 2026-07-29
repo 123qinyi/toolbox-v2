@@ -5,8 +5,12 @@
 #   bash .workbuddy/memory/sync.sh [GITHUB_PAT]
 #
 # 自动检测模式：
-#   老设备（~/.workbuddy/MEMORY.md 已存在）→ 备份身份 + 同步日志 + commit + push
+#   已配置设备（~/.workbuddy/MEMORY.md 已存在）→ 备份本地 → 拉取远程 → 恢复到本地 → 推送
 #   新设备（~/.workbuddy/MEMORY.md 不存在）→ 恢复身份 + 恢复日志 + 配置 Git + 装依赖
+#
+# 日常切换：
+#   离开设备A：bash .workbuddy/memory/sync.sh
+#   到了设备B：bash .workbuddy/memory/sync.sh（自动拉取A的最新内容并恢复到本地）
 
 set -e
 
@@ -45,16 +49,18 @@ else
 fi
 
 # ==========================================
-#  SYNC 模式（老设备，离开前执行）
+#  SYNC 模式（已配置设备，切换前后均可执行）
 # ==========================================
 if [ "$MODE" = "sync" ]; then
   echo "========================================"
-  echo "  同步模式：备份并推送"
+  echo "  同步模式：备份 → 拉取 → 恢复 → 推送"
   echo "========================================"
   echo ""
 
-  # 1. 备份身份文件到 repo
-  echo "[1/3] 备份身份文件..."
+  cd "$REPO_ROOT"
+
+  # 1. 备份本地身份文件 + 工作区日志到 repo
+  echo "[1/4] 备份本地文件..."
   for backup in "${!IDENTITY[@]}"; do
     src="$USER_WB/${IDENTITY[$backup]}"
     if [ -f "$src" ]; then
@@ -62,9 +68,6 @@ if [ "$MODE" = "sync" ]; then
       echo "  ${IDENTITY[$backup]} -> $backup"
     fi
   done
-
-  # 2. 同步工作区日志到 repo
-  echo "[2/3] 同步工作区日志..."
   if [ -d "$WORKSPACE_MEMORY" ]; then
     for f in "$WORKSPACE_MEMORY"/*.md; do
       [ -f "$f" ] || continue
@@ -75,17 +78,52 @@ if [ "$MODE" = "sync" ]; then
     echo "  工作区日志目录不存在，跳过"
   fi
 
-  # 3. 提交并推送
-  echo "[3/3] 提交并推送..."
-  cd "$REPO_ROOT"
+  # 2. 提交本地变更 + 拉取远程
+  echo "[2/4] 提交本地变更并拉取远程..."
   git add .workbuddy/memory/
-  if git diff --cached --quiet; then
-    echo "  无变更，跳过提交"
+  if git diff --cached --quiet 2>/dev/null; then
+    echo "  本地无新变更"
   else
     git commit -m "sync: $(date '+%Y-%m-%d %H:%M') 多设备同步"
-    echo "  已提交"
+    echo "  本地变更已提交"
   fi
-  git push origin main
+
+  git pull origin main 2>/dev/null || true
+  if git diff --name-only --diff-filter=U 2>/dev/null | grep -q .; then
+    echo ""
+    echo "  ⚠ 合并冲突！两台设备可能同时修改了同一文件。"
+    echo "  请手动解决冲突后执行："
+    echo "    git add .workbuddy/memory/ && git commit && git push origin main"
+    exit 1
+  fi
+  echo "  拉取完成"
+
+  # 3. 恢复 repo 文件到本地（获取其他设备的最新版本）
+  echo "[3/4] 恢复到本地..."
+  for backup in "${!IDENTITY[@]}"; do
+    src="$SCRIPT_DIR/$backup"
+    dst="$USER_WB/${IDENTITY[$backup]}"
+    if [ -f "$src" ]; then
+      cp "$src" "$dst"
+      echo "  $backup -> ~/.workbuddy/${IDENTITY[$backup]}"
+    fi
+  done
+  mkdir -p "$WORKSPACE_MEMORY"
+  for f in "$SCRIPT_DIR"/*.md; do
+    [ -f "$f" ] || continue
+    fname="$(basename "$f")"
+    [[ "$fname" == *_BACKUP.md ]] && continue
+    cp "$f" "$WORKSPACE_MEMORY/$fname"
+    echo "  $fname -> 工作区日志"
+  done
+
+  # 4. 推送
+  echo "[4/4] 推送..."
+  if git push origin main 2>/dev/null; then
+    echo "  推送成功"
+  else
+    echo "  [警告] 推送失败（可能是网络问题），本地变更已保存，可稍后重试"
+  fi
   echo ""
   echo "========================================"
   echo "  同步完成，可安全切换设备"
@@ -180,9 +218,10 @@ else
   echo "  初始化完成！"
   echo "========================================"
   echo ""
-  echo "日常切换："
+  echo "日常切换（两台设备都配过后）："
   echo "  离开设备：bash .workbuddy/memory/sync.sh"
-  echo "  新设备：  git pull && bash .workbuddy/memory/sync.sh"
+  echo "  到了设备：bash .workbuddy/memory/sync.sh"
+  echo "  （脚本自动拉取远程 + 恢复到本地 + 备份本地 + 推送）"
   echo ""
   echo "工具地址：https://123qinyi.github.io/toolbox-v2/"
 fi
